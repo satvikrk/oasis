@@ -1,0 +1,134 @@
+:root{
+  --bg:#0f1724;
+  --card:#0b1220;
+  --accent:#7c4dff;
+  --muted:#9aa4b2;
+}
+
+body{
+  margin:0;
+  font-family: Inter, Roboto, Arial, sans-serif;
+  background: linear-gradient(180deg,#071024 0%, #0f1724 100%);
+  color: #e6eef8;
+}
+
+.panel{
+  min-height: 60vh;
+  border-radius: 10px;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));
+}
+
+.player-panel{
+  display:flex;
+  align-items:flex-start;
+  justify-content:center;
+}
+
+.song-list-wrapper{
+  max-height: 64vh;
+  overflow: auto;
+}
+
+.player-wrap .react-player{
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* nice subtle list item hover provided by MUI already; keep small spacing */
+
+/* small responsive tweaks */
+@media (max-width:720px){
+  .panel{min-height:auto}
+}
+
+/* App specific styles */
+.app-root{
+  min-height:100vh;
+  background: linear-gradient(180deg,#071024 0%, #0b1220 60%);
+}
+.navbar{
+  /* Replaced Material blue with a more subtle dark-to-purple gradient */
+  background: linear-gradient(90deg, #0b1220, #1f1533);
+  color: white;
+  padding: 12px 20px;
+  box-shadow: 0 2px 10px rgba(2,6,23,0.6);
+}
+.nav-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between}
+.brand{font-weight:700;font-size:1.25rem}
+.nav-links a{color:rgba(255,255,255,0.95);margin-left:12px;text-decoration:none;font-size:0.95rem;padding:8px 12px;border-radius:999px;background:transparent;transition:all .18s}
+.nav-links a:hover{transform:translateY(-2px);background:rgba(255,255,255,0.04)}
+.nav-links a.active{background:rgba(255,255,255,0.06);box-shadow:0 6px 18px rgba(12,14,22,0.4)}
+
+/* page and form utilities */
+.page-card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:18px;border-radius:12px;margin:12px}
+.page-header{display:flex;flex-direction:column;gap:6px}
+.form-row{display:flex;gap:8px}
+.form-vertical{display:flex;flex-direction:column;gap:8px}
+.form-label{font-size:0.95rem;color:var(--muted)}
+.input{padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit;outline:none}
+.input:focus{box-shadow:0 6px 18px rgba(12,14,22,0.45);border-color:rgba(124,77,255,0.12)}
+.btn-primary{background:var(--accent);border:none;color:white;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:600}
+.btn-secondary{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted);padding:8px 10px;border-radius:8px}
+.notice{background:rgba(124,77,255,0.06);padding:10px;border-radius:8px;color:var(--muted);margin-top:8px}
+.error{color:#ffb4b4;background:rgba(255,90,90,0.06);padding:8px;border-radius:8px}
+
+/* playlists */
+.playlist-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.playlist-card{padding:14px;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.02)}
+.playlist-title{font-weight:700}
+.playlist-meta{font-size:0.85rem}
+.playlist-songs{margin-top:10px;max-height:120px;overflow:auto}
+.song-line{font-size:0.9rem;padding:4px 0;border-bottom:1px dashed rgba(255,255,255,0.01)}
+
+/* small user badge placeholder on navbar */
+.user-badge{background:rgba(255,255,255,0.03);padding:6px 10px;border-radius:999px;font-size:0.9rem}
+
+.hero{padding:64px 20px;background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);}
+.hero-inner{max-width:1200px;margin:0 auto;color:#e8f0ff}
+.hero h1{font-size:2.6rem;margin:0 0 8px}
+.hero .lead{color:var(--muted);margin-bottom:18px}
+.cta{background:var(--accent);border:none;color:white;padding:12px 18px;border-radius:8px;font-weight:600;cursor:pointer}
+
+.main{max-width:1200px;margin:30px auto;padding:0 18px}
+.section-header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px}
+.section-header h2{margin:0;color:#eaf2ff}
+.section-header .muted{color:var(--muted)}
+
+.content-row{display:flex;gap:22px}
+.left-col{flex:1}
+.right-col{width:420px}
+
+.player-card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:18px;border-radius:10px}
+
+.song-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+.song-card{display:flex;align-items:center;gap:12px;padding:12px;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.02);color:inherit;cursor:pointer}
+.song-card:hover{transform:translateY(-4px);box-shadow:0 8px 20px rgba(3,7,18,0.5)}
+.song-card:active{transform:translateY(-2px)}
+.song-card.active{outline:2px solid rgba(124,77,255,0.2);box-shadow:0 12px 30px rgba(12,14,22,0.6)}
+.song-card .art{width:64px;height:64px;background:#071427;border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.song-card .art img{width:64px;height:64px;object-fit:cover;border-radius:6px}
+.song-card .meta{flex:1;text-align:left}
+.song-card .title{font-weight:600}
+.song-card .sub{font-size:0.85rem;color:var(--muted);margin-top:4px}
+
+.player-root{display:flex;flex-direction:column;gap:12px}
+.player-cover{margin-bottom:10px}
+.player-cover img{width:100%;height:220px;object-fit:cover;border-radius:8px}
+.player-title{font-size:1.15rem;font-weight:700}
+.player-sub{color:var(--muted);font-size:0.9rem}
+.player-controls{display:flex;gap:12px;align-items:center}
+.btn-play{background:var(--accent);color:white;border:none;padding:10px 14px;border-radius:8px;cursor:pointer}
+.progress-wrap{flex:1}
+.progress{width:100%}
+.time{display:flex;justify-content:space-between;font-size:0.85rem;color:var(--muted);margin-top:6px}
+
+.player-empty{padding:36px;text-align:center;color:rgba(255,255,255,0.85)}
+
+@media (max-width:880px){
+  .content-row{flex-direction:column}
+  .right-col{width:100%}
+  .song-grid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}
+  .hero h1{font-size:1.9rem}
+}
+

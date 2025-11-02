@@ -1,0 +1,5 @@
+flask>=2.2
+mysql-connector-python>=8.0
+python-dotenv>=1.0
+flask-cors>=3.0
+# mutagen was removed — metadata extraction not used per user's request

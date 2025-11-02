@@ -332,3 +332,55 @@ UNLOCK TABLES;
 
 -- Dump completed on 2025-10-31 23:54:37
 
+ALTER TABLE Users
+ADD COLUMN is_allowed_to_stream BOOLEAN DEFAULT TRUE,
+ADD COLUMN songs_streamed INT DEFAULT 0;
+
+DELIMITER $$
+
+CREATE TRIGGER trg_limit_free_user_streams
+AFTER INSERT ON Listening_History
+FOR EACH ROW
+BEGIN
+    DECLARE current_count INT;
+    DECLARE current_type ENUM('free','premium');
+    DECLARE current_flag BOOLEAN;
+
+    -- Get user details
+    SELECT subscription_type, songs_streamed, is_allowed_to_stream
+    INTO current_type, current_count, current_flag
+    FROM Users
+    WHERE user_id = NEW.user_id;
+
+    -- Only affect free users
+    IF current_type = 'free' THEN
+
+        -- Increment the counter
+        UPDATE Users
+        SET songs_streamed = songs_streamed + 1
+        WHERE user_id = NEW.user_id;
+
+        -- Check if limit exceeded
+        SELECT songs_streamed INTO current_count
+        FROM Users
+        WHERE user_id = NEW.user_id;
+
+        IF current_count >= 10 THEN
+            UPDATE Users
+            SET is_allowed_to_stream = FALSE
+            WHERE user_id = NEW.user_id;
+        END IF;
+
+    END IF;
+END$$
+
+DELIMITER ;
+
+SET GLOBAL event_scheduler = ON;
+
+CREATE EVENT reset_free_user_streams
+ON SCHEDULE EVERY 1 DAY
+DO
+  UPDATE Users
+  SET songs_streamed = 0, is_allowed_to_stream = TRUE
+  WHERE subscription_type = 'free';
