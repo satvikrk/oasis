@@ -216,7 +216,7 @@ SELECT 'Oasis', NULL, 'UK', 1991
 WHERE NOT EXISTS (SELECT 1 FROM Artists WHERE name = 'Oasis');
 SET @artist_id := (SELECT artist_id FROM Artists WHERE name = 'Oasis' LIMIT 1);
 INSERT INTO Albums (title, release_date, genre, cover_url)
-SELECT "(What's the Story) Morning Glory?", '1995-10-02', 'Rock', 'https://upload.wikimedia.org/wikipedia/en/b/bf/Oasis_-_%28What%27s_the_Story%29_Morning_Glory_album_cover.png'
+SELECT "(What's the Story) Morning Glory?", '1995-10-02', 'Rock', 'https://upload.wikimedia.org/wikipedia/en/b/b1/Oasis_-_%28What%27s_The_Story%29_Morning_Glory_album_cover.jpg'
 WHERE NOT EXISTS (SELECT 1 FROM Albums WHERE title = "(What's the Story) Morning Glory?");
 SET @album_id := (SELECT album_id FROM Albums WHERE title = "(What's the Story) Morning Glory?" LIMIT 1);
 INSERT INTO Songs (album_id, title, duration, language, file_url)
@@ -232,7 +232,7 @@ SELECT 'The Alan Parsons Project', NULL, 'UK', 1975
 WHERE NOT EXISTS (SELECT 1 FROM Artists WHERE name = 'The Alan Parsons Project');
 SET @artist_id := (SELECT artist_id FROM Artists WHERE name = 'The Alan Parsons Project' LIMIT 1);
 INSERT INTO Albums (title, release_date, genre, cover_url)
-SELECT 'The Turn of a Friendly Card', '1980-11-07', 'Progressive Rock', 'https://upload.wikimedia.org/wikipedia/en/8/8a/The_Alan_Parsons_Project_-_The_Turn_of_a_Friendly_Card.jpg'
+SELECT 'The Turn of a Friendly Card', '1980-11-07', 'Progressive Rock', 'https://upload.wikimedia.org/wikipedia/en/e/e6/The_Alan_Parsons_Project_-_The_Turn_of_a_Friendly_Card.jpg'
 WHERE NOT EXISTS (SELECT 1 FROM Albums WHERE title = 'The Turn of a Friendly Card');
 SET @album_id := (SELECT album_id FROM Albums WHERE title = 'The Turn of a Friendly Card' LIMIT 1);
 INSERT INTO Songs (album_id, title, duration, language, file_url)

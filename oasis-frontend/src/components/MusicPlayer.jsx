@@ -47,21 +47,34 @@ export default function MusicPlayer({
 
   // Function to record a stream
   const recordStream = async (songId) => {
-    if (!songId) return;
+    if (!songId) return false;
+    
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('Please log in to play music');
+      return false;
+    }
+
     try {
-      const response = await fetch('/api/history', {
+      const response = await fetch(`${API_BASE}/api/history`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ song_id: songId })
       });
       
+      if (response.status === 401) {
+        alert('Please log in to play music');
+        return false;
+      }
+      
       if (response.status === 403) {
         const data = await response.json();
         // Pause playback
         audioRef.current?.pause();
+        setPlaying(false);
         // Show alert to user
         alert(data.message || 'You have reached your daily streaming limit. Please upgrade to premium for unlimited streaming.');
         return false;
@@ -75,8 +88,6 @@ export default function MusicPlayer({
       const data = await response.json();
       // If we got streaming stats back, update them in the UI
       if (data.streaming_stats) {
-        // Optionally dispatch this to a global state management system
-        // or pass it up to a parent component
         if (data.streaming_stats.songs_remaining <= 3) {
           alert(`You have ${data.streaming_stats.songs_remaining} songs remaining in your daily limit.`);
         }
@@ -85,6 +96,7 @@ export default function MusicPlayer({
       return true;
     } catch (error) {
       console.error('Error recording stream:', error);
+      setPlaying(false);
       return false;
     }
   };
@@ -92,22 +104,32 @@ export default function MusicPlayer({
   useEffect(() => {
     // when song changes, load. Only autoplay if autoPlay === true.
     const a = audioRef.current;
-    if (!a) return;
+    if (!a || !song) return;
+    
     setProgress(0);
     setDuration(0);
     a.pause();
     a.load();
-    if (song && autoPlay) {
-      const playPromise = a.play();
-      if (playPromise && playPromise.then) {
-        playPromise.then(async () => {
-          setPlaying(true);
-          // Record stream immediately when playback starts
-          await recordStream();
-        }).catch(() => setPlaying(false));
-      } else {
+    
+    const startPlayback = async () => {
+      // First try to record the stream
+      const streamOk = await recordStream(song.song_id);
+      if (!streamOk) {
+        setPlaying(false);
+        return;
+      }
+      
+      try {
+        await a.play();
+        setPlaying(true);
+      } catch (error) {
+        console.error('Playback failed:', error);
         setPlaying(false);
       }
+    };
+
+    if (song && autoPlay) {
+      startPlayback();
     } else {
       setPlaying(false);
     }
@@ -123,27 +145,28 @@ export default function MusicPlayer({
 
   const toggle = async () => {
     const a = audioRef.current;
-    if (!a) return;
+    if (!a || !song) return;
+
     if (playing) {
       a.pause();
       setPlaying(false);
     } else {
+      // Check for login first
+      if (!localStorage.getItem('token')) {
+        alert('Please log in to play music');
+        return;
+      }
+      
       // Record stream before attempting to play
-      await recordStream();
+      const streamOk = await recordStream(song.song_id);
+      if (!streamOk) return;
       
-      // Only proceed with playback if recordStream didn't stop us (e.g., due to streaming limit)
-      if (!a.paused) return;
-      
-      const playPromise = a.play();
-      if (playPromise && playPromise.then) {
-        playPromise.then(() => {
-          setPlaying(true);
-        }).catch((error) => {
-          console.error('Playback failed:', error);
-          setPlaying(false);
-        });
-      } else {
+      try {
+        await a.play();
         setPlaying(true);
+      } catch (error) {
+        console.error('Playback failed:', error);
+        setPlaying(false);
       }
     }
   };

@@ -140,15 +140,14 @@ def get_user_id_from_token(req):
 
 @app.post('/api/history')
 def api_history():
-    """Record a listening event. Requires Authorization Bearer token or user_id in body (token preferred).
+    """Record a listening event. Requires Authorization Bearer token.
     Body: { song_id: int, device: str (optional) }
     """
     user_id = get_user_id_from_token(request)
-    data = request.get_json(force=True) or {}
-    if not user_id and data.get('user_id'):
-        user_id = data.get('user_id')
     if not user_id:
         return jsonify({'error': 'authentication required'}), 401
+        
+    data = request.get_json(force=True) or {}
 
     song_id = data.get('song_id')
     device = data.get('device')
@@ -159,53 +158,40 @@ def api_history():
     try:
         cur = conn.cursor(dictionary=True)
         
-        # Check user's streaming status
-        cur.execute('''
-            SELECT subscription_type, songs_streamed, is_allowed_to_stream 
-            FROM Users 
-            WHERE user_id = %s
-        ''', (user_id,))
+        # First check if user is allowed to stream
+        cur.execute('SELECT is_allowed_to_stream FROM Users WHERE user_id = %s', (user_id,))
         user = cur.fetchone()
         
         if not user:
             return jsonify({'error': 'user not found'}), 404
-        
-        # If user is on free tier, check streaming limits
-        if user['subscription_type'] == 'free':
-            if not user['is_allowed_to_stream']:
-                return jsonify({
-                    'error': 'streaming_limit_exceeded',
-                    'message': 'Daily streaming limit reached'
-                }), 403
             
-            if user['songs_streamed'] >= 10:
-                return jsonify({
-                    'error': 'streaming_limit_exceeded',
-                    'message': 'Daily streaming limit reached'
-                }), 403
+        if not user['is_allowed_to_stream']:
+            return jsonify({
+                'error': 'streaming_not_allowed',
+                'message': 'You have reached your daily streaming limit'
+            }), 403
 
-        # Record the stream
+        # User is allowed to stream, record it
         cur.execute('INSERT INTO Listening_History (user_id, song_id, device) VALUES (%s, %s, %s)', 
                    (user_id, song_id, device))
-        
-        # The trigger will handle updating songs_streamed and is_allowed_to_stream
         conn.commit()
         
-        # Return updated streaming counts for free users
-        if user['subscription_type'] == 'free':
-            cur.execute('''
-                SELECT songs_streamed, is_allowed_to_stream, 
-                       (10 - songs_streamed) as songs_remaining
-                FROM Users 
-                WHERE user_id = %s
-            ''', (user_id,))
-            stats = cur.fetchone()
-            return jsonify({
-                'ok': True,
-                'streaming_stats': stats
-            }), 201
+        # Get updated stats after trigger has run
+        cur.execute('''
+            SELECT songs_streamed, is_allowed_to_stream,
+                   CASE 
+                       WHEN subscription_type = 'free' THEN (10 - songs_streamed)
+                       ELSE NULL 
+                   END as songs_remaining
+            FROM Users 
+            WHERE user_id = %s
+        ''', (user_id,))
+        stats = cur.fetchone()
         
-        return jsonify({'ok': True}), 201
+        return jsonify({
+            'ok': True,
+            'streaming_stats': stats
+        }), 201
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
