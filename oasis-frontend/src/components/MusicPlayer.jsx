@@ -8,7 +8,16 @@ function formatTime(sec = 0) {
   return `${m}:${s}`;
 }
 
-export default function MusicPlayer({ song, autoPlay = false }) {
+export default function MusicPlayer({ 
+  song, 
+  autoPlay = false, 
+  onEnded,
+  showPlaylistControls = false,
+  onNext,
+  onPrevious,
+  hasNext = false,
+  hasPrevious = false
+}) {
   const audioRef = useRef(null);
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -36,6 +45,50 @@ export default function MusicPlayer({ song, autoPlay = false }) {
     };
   }, [song, API_BASE]);
 
+  // Function to record a stream
+  const recordStream = async (songId) => {
+    if (!songId) return;
+    try {
+      const response = await fetch('/api/history', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ song_id: songId })
+      });
+      
+      if (response.status === 403) {
+        const data = await response.json();
+        // Pause playback
+        audioRef.current?.pause();
+        // Show alert to user
+        alert(data.message || 'You have reached your daily streaming limit. Please upgrade to premium for unlimited streaming.');
+        return false;
+      }
+      
+      if (!response.ok) {
+        console.error('Failed to record stream');
+        return false;
+      }
+
+      const data = await response.json();
+      // If we got streaming stats back, update them in the UI
+      if (data.streaming_stats) {
+        // Optionally dispatch this to a global state management system
+        // or pass it up to a parent component
+        if (data.streaming_stats.songs_remaining <= 3) {
+          alert(`You have ${data.streaming_stats.songs_remaining} songs remaining in your daily limit.`);
+        }
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error recording stream:', error);
+      return false;
+    }
+  };
+
   useEffect(() => {
     // when song changes, load. Only autoplay if autoPlay === true.
     const a = audioRef.current;
@@ -49,17 +102,8 @@ export default function MusicPlayer({ song, autoPlay = false }) {
       if (playPromise && playPromise.then) {
         playPromise.then(async () => {
           setPlaying(true);
-          // send listening history when playback actually starts
-          try {
-            const body = { song_id: song.song_id, device: navigator.userAgent };
-            // if no token present, include user_id from localStorage so backend can accept it
-            if (!localStorage.getItem('oasis_token') && localStorage.getItem('oasis_user_id')) {
-              body.user_id = Number(localStorage.getItem('oasis_user_id'));
-            }
-            await fetchJSON('/api/history', { method: 'POST', body: JSON.stringify(body) });
-          } catch (e) {
-            // ignore; history is best-effort
-          }
+          // Record stream immediately when playback starts
+          await recordStream();
         }).catch(() => setPlaying(false));
       } else {
         setPlaying(false);
@@ -67,27 +111,40 @@ export default function MusicPlayer({ song, autoPlay = false }) {
     } else {
       setPlaying(false);
     }
-  }, [song, API_BASE, autoPlay]);
 
-  const toggle = () => {
+    // Add ended event listener
+    const onEnd = () => {
+      setPlaying(false);
+      onEnded?.();
+    };
+    a.addEventListener('ended', onEnd);
+    return () => a.removeEventListener('ended', onEnd);
+  }, [song, API_BASE, autoPlay, onEnded]);
+
+  const toggle = async () => {
     const a = audioRef.current;
     if (!a) return;
     if (playing) {
       a.pause();
       setPlaying(false);
     } else {
-      a.play();
-      setPlaying(true);
-      // record history when user explicitly starts playback
-      (async () => {
-        try {
-          const body = { song_id: song.song_id, device: navigator.userAgent };
-          if (!localStorage.getItem('oasis_token') && localStorage.getItem('oasis_user_id')) {
-            body.user_id = Number(localStorage.getItem('oasis_user_id'));
-          }
-          await fetchJSON('/api/history', { method: 'POST', body: JSON.stringify(body) });
-        } catch (e) {}
-      })();
+      // Record stream before attempting to play
+      await recordStream();
+      
+      // Only proceed with playback if recordStream didn't stop us (e.g., due to streaming limit)
+      if (!a.paused) return;
+      
+      const playPromise = a.play();
+      if (playPromise && playPromise.then) {
+        playPromise.then(() => {
+          setPlaying(true);
+        }).catch((error) => {
+          console.error('Playback failed:', error);
+          setPlaying(false);
+        });
+      } else {
+        setPlaying(true);
+      }
     }
   };
 
@@ -129,7 +186,33 @@ export default function MusicPlayer({ song, autoPlay = false }) {
       </audio>
 
       <div className="player-controls">
-        <button className="btn-play" onClick={toggle} aria-pressed={playing}>{playing ? 'Pause' : 'Play'}</button>
+        {showPlaylistControls && (
+          <button 
+            className="btn-control" 
+            onClick={onPrevious}
+            disabled={!hasPrevious}
+            title="Previous track"
+          >
+            ⏮
+          </button>
+        )}
+        <button 
+          className="btn-play" 
+          onClick={toggle} 
+          aria-pressed={playing}
+        >
+          {playing ? 'Pause' : 'Play'}
+        </button>
+        {showPlaylistControls && (
+          <button 
+            className="btn-control" 
+            onClick={onNext}
+            disabled={!hasNext}
+            title="Next track"
+          >
+            ⏭
+          </button>
+        )}
         <div className="progress-wrap">
           <input
             type="range"

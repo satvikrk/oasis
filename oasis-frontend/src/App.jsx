@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, NavLink, useNavigate, useLocation } from 
 import Login from './pages/Login';
 import Playlists from './pages/Playlists';
 import PlayerPage from './pages/PlayerPage';
+import Profile from './pages/Profile';
 
 function App() {
   const [songs, setSongs] = useState([]);
@@ -71,7 +72,9 @@ function App() {
               {/* show username instead of Login link when signed in */}
               {username ? (
                 <>
-                  <span className="user-badge">{username}</span>
+                  <NavLink to="/profile" className="user-badge" title="View Profile">
+                    {username}
+                  </NavLink>
                   <button className="btn-secondary" style={{marginLeft:8}} onClick={logout}>Logout</button>
                 </>
               ) : (
@@ -88,6 +91,7 @@ function App() {
           <Route path="/player" element={<PlayerPage songs={songs} current={current} setCurrent={setCurrent} autoPlay={autoPlayNext} />} />
           <Route path="/playlists" element={<Playlists />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/profile" element={<Profile />} />
         </Routes>
       </div>
     </BrowserRouter>

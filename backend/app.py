@@ -157,10 +157,56 @@ def api_history():
 
     conn = POOL.get_connection()
     try:
-        cur = conn.cursor()
-        cur.execute('INSERT INTO Listening_History (user_id, song_id, device) VALUES (%s, %s, %s)', (user_id, song_id, device))
+        cur = conn.cursor(dictionary=True)
+        
+        # Check user's streaming status
+        cur.execute('''
+            SELECT subscription_type, songs_streamed, is_allowed_to_stream 
+            FROM Users 
+            WHERE user_id = %s
+        ''', (user_id,))
+        user = cur.fetchone()
+        
+        if not user:
+            return jsonify({'error': 'user not found'}), 404
+        
+        # If user is on free tier, check streaming limits
+        if user['subscription_type'] == 'free':
+            if not user['is_allowed_to_stream']:
+                return jsonify({
+                    'error': 'streaming_limit_exceeded',
+                    'message': 'Daily streaming limit reached'
+                }), 403
+            
+            if user['songs_streamed'] >= 10:
+                return jsonify({
+                    'error': 'streaming_limit_exceeded',
+                    'message': 'Daily streaming limit reached'
+                }), 403
+
+        # Record the stream
+        cur.execute('INSERT INTO Listening_History (user_id, song_id, device) VALUES (%s, %s, %s)', 
+                   (user_id, song_id, device))
+        
+        # The trigger will handle updating songs_streamed and is_allowed_to_stream
         conn.commit()
+        
+        # Return updated streaming counts for free users
+        if user['subscription_type'] == 'free':
+            cur.execute('''
+                SELECT songs_streamed, is_allowed_to_stream, 
+                       (10 - songs_streamed) as songs_remaining
+                FROM Users 
+                WHERE user_id = %s
+            ''', (user_id,))
+            stats = cur.fetchone()
+            return jsonify({
+                'ok': True,
+                'streaming_stats': stats
+            }), 201
+        
         return jsonify({'ok': True}), 201
+        
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     finally:
@@ -220,6 +266,53 @@ def api_list_playlists():
         except Exception:
             pass
         conn.close()
+
+@app.get('/api/user/profile')
+def api_get_profile():
+    user_id = get_user_id_from_token(request)
+    if not user_id:
+        return jsonify({'error': 'authentication required'}), 401
+    
+    conn = POOL.get_connection()
+    try:
+        cur = conn.cursor(dictionary=True)
+        
+        # Get user details including streaming limits
+        cur.execute('''
+            SELECT 
+                username, email, subscription_type, date_joined,
+                songs_streamed, is_allowed_to_stream,
+                (10 - songs_streamed) as songs_remaining
+            FROM Users 
+            WHERE user_id = %s
+        ''', (user_id,))
+        user = cur.fetchone()
+        
+        if not user:
+            return jsonify({'error': 'user not found'}), 404
+        
+        # Get playlist count
+        cur.execute('SELECT COUNT(*) as count FROM Playlists WHERE user_id = %s', (user_id,))
+        playlists = cur.fetchone()
+        user['total_playlists'] = playlists['count'] if playlists else 0
+        
+        # Get liked songs count
+        cur.execute('SELECT COUNT(*) as count FROM Likes WHERE user_id = %s', (user_id,))
+        likes = cur.fetchone()
+        user['songs_liked'] = likes['count'] if likes else 0
+        
+        # Get total streams count
+        cur.execute('SELECT COUNT(*) as count FROM Listening_History WHERE user_id = %s', (user_id,))
+        streams = cur.fetchone()
+        user['total_streams'] = streams['count'] if streams else 0
+        
+        return jsonify(user)
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+        conn.close()
   
 
 @app.post('/api/playlists/<int:pid>/songs')
@@ -244,6 +337,57 @@ def api_add_song_to_playlist(pid):
         return jsonify({'ok': True}), 201
     except mysql.connector.errors.IntegrityError:
         return jsonify({'error': 'already exists'}), 409
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+        conn.close()
+
+@app.delete('/api/playlists/<int:pid>/songs/<int:sid>')
+def api_remove_song_from_playlist(pid, sid):
+    user_id = get_user_id_from_token(request)
+    if not user_id:
+        return jsonify({'error': 'authentication required'}), 401
+    
+    conn = POOL.get_connection()
+    try:
+        cur = conn.cursor()
+        # verify playlist belongs to user
+        cur.execute('SELECT user_id FROM Playlists WHERE playlist_id = %s', (pid,))
+        row = cur.fetchone()
+        if not row or row[0] != user_id:
+            return jsonify({'error': 'not allowed'}), 403
+            
+        cur.execute('DELETE FROM Playlist_Songs WHERE playlist_id = %s AND song_id = %s', (pid, sid))
+        conn.commit()
+        return jsonify({'ok': True}), 200
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+        conn.close()
+
+@app.delete('/api/playlists/<int:pid>')
+def api_delete_playlist(pid):
+    user_id = get_user_id_from_token(request)
+    if not user_id:
+        return jsonify({'error': 'authentication required'}), 401
+    
+    conn = POOL.get_connection()
+    try:
+        cur = conn.cursor()
+        # verify playlist belongs to user
+        cur.execute('SELECT user_id FROM Playlists WHERE playlist_id = %s', (pid,))
+        row = cur.fetchone()
+        if not row or row[0] != user_id:
+            return jsonify({'error': 'not allowed'}), 403
+            
+        # Delete the playlist (cascade will handle playlist_songs)
+        cur.execute('DELETE FROM Playlists WHERE playlist_id = %s AND user_id = %s', (pid, user_id))
+        conn.commit()
+        return jsonify({'ok': True}), 200
     finally:
         try:
             cur.close()
