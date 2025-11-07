@@ -88,7 +88,7 @@ SELECT 'Radiohead', NULL, 'UK', 1985
 WHERE NOT EXISTS (SELECT 1 FROM Artists WHERE name = 'Radiohead');
 SET @artist_id := (SELECT artist_id FROM Artists WHERE name = 'Radiohead' LIMIT 1);
 INSERT INTO Albums (title, release_date, genre, cover_url)
-SELECT 'The Bends', '1995-03-13', 'Alternative Rock', 'https://upload.wikimedia.org/wikipedia/en/0/0b/Radioheadthebends.png'
+SELECT 'The Bends', '1995-03-13', 'Alternative Rock', 'https://upload.wikimedia.org/wikipedia/en/5/55/Radioheadthebends.png'
 WHERE NOT EXISTS (SELECT 1 FROM Albums WHERE title = 'The Bends');
 SET @album_id := (SELECT album_id FROM Albums WHERE title = 'The Bends' LIMIT 1);
 INSERT INTO Songs (album_id, title, duration, language, file_url)
@@ -104,7 +104,7 @@ SELECT 'Radiohead', NULL, 'UK', 1985
 WHERE NOT EXISTS (SELECT 1 FROM Artists WHERE name = 'Radiohead');
 SET @artist_id := (SELECT artist_id FROM Artists WHERE name = 'Radiohead' LIMIT 1);
 INSERT INTO Albums (title, release_date, genre, cover_url)
-SELECT 'A Moon Shaped Pool', '2016-05-08', 'Art Rock', 'https://upload.wikimedia.org/wikipedia/en/6/6a/A_Moon_Shaped_Pool.jpg'
+SELECT 'A Moon Shaped Pool', '2016-05-08', 'Art Rock', 'https://upload.wikimedia.org/wikipedia/en/6/6a/Amoonshapedpool.png'
 WHERE NOT EXISTS (SELECT 1 FROM Albums WHERE title = 'A Moon Shaped Pool');
 SET @album_id := (SELECT album_id FROM Albums WHERE title = 'A Moon Shaped Pool' LIMIT 1);
 INSERT INTO Songs (album_id, title, duration, language, file_url)
@@ -136,7 +136,7 @@ SELECT 'Dire Straits', NULL, 'UK', 1978
 WHERE NOT EXISTS (SELECT 1 FROM Artists WHERE name = 'Dire Straits');
 SET @artist_id := (SELECT artist_id FROM Artists WHERE name = 'Dire Straits' LIMIT 1);
 INSERT INTO Albums (title, release_date, genre, cover_url)
-SELECT 'Communiqué', '1979-06-05', 'Rock', 'https://upload.wikimedia.org/wikipedia/en/9/98/Dire_Straits_Communique.jpg'
+SELECT 'Communiqué', '1979-06-05', 'Rock', 'https://upload.wikimedia.org/wikipedia/en/1/14/Dire_Straits_Communique.jpg'
 WHERE NOT EXISTS (SELECT 1 FROM Albums WHERE title = 'Communiqué');
 SET @album_id := (SELECT album_id FROM Albums WHERE title = 'Communiqué' LIMIT 1);
 INSERT INTO Songs (album_id, title, duration, language, file_url)
@@ -152,7 +152,7 @@ SELECT 'Van Halen', NULL, 'USA', 1972
 WHERE NOT EXISTS (SELECT 1 FROM Artists WHERE name = 'Van Halen');
 SET @artist_id := (SELECT artist_id FROM Artists WHERE name = 'Van Halen' LIMIT 1);
 INSERT INTO Albums (title, release_date, genre, cover_url)
-SELECT '1984', '1984-01-09', 'Hard Rock', 'https://upload.wikimedia.org/wikipedia/en/8/8b/Van_Halen_-_1984.jpg'
+SELECT '1984', '1984-01-09', 'Hard Rock', 'https://upload.wikimedia.org/wikipedia/en/5/5f/Van_Halen_-_1984.jpg'
 WHERE NOT EXISTS (SELECT 1 FROM Albums WHERE title = '1984');
 SET @album_id := (SELECT album_id FROM Albums WHERE title = '1984' LIMIT 1);
 INSERT INTO Songs (album_id, title, duration, language, file_url)
@@ -168,7 +168,7 @@ SELECT 'The Police', NULL, 'UK', 1977
 WHERE NOT EXISTS (SELECT 1 FROM Artists WHERE name = 'The Police');
 SET @artist_id := (SELECT artist_id FROM Artists WHERE name = 'The Police' LIMIT 1);
 INSERT INTO Albums (title, release_date, genre, cover_url)
-SELECT 'Synchronicity', '1983-06-17', 'New Wave', 'https://upload.wikimedia.org/wikipedia/en/8/8d/Police-album-synchronicity.jpg'
+SELECT 'Synchronicity', '1983-06-17', 'New Wave', 'https://upload.wikimedia.org/wikipedia/en/7/7f/Police-album-synchronicity.jpg'
 WHERE NOT EXISTS (SELECT 1 FROM Albums WHERE title = 'Synchronicity');
 SET @album_id := (SELECT album_id FROM Albums WHERE title = 'Synchronicity' LIMIT 1);
 INSERT INTO Songs (album_id, title, duration, language, file_url)
@@ -184,7 +184,7 @@ SELECT 'Pink Floyd', NULL, 'UK', 1965
 WHERE NOT EXISTS (SELECT 1 FROM Artists WHERE name = 'Pink Floyd');
 SET @artist_id := (SELECT artist_id FROM Artists WHERE name = 'Pink Floyd' LIMIT 1);
 INSERT INTO Albums (title, release_date, genre, cover_url)
-SELECT 'The Division Bell', '1994-03-28', 'Progressive Rock', 'https://upload.wikimedia.org/wikipedia/en/5/5c/Divisionbell.jpg'
+SELECT 'The Division Bell', '1994-03-28', 'Progressive Rock', 'https://upload.wikimedia.org/wikipedia/en/6/6e/Pink_Floyd_-_Division_Bell.jpg'
 WHERE NOT EXISTS (SELECT 1 FROM Albums WHERE title = 'The Division Bell');
 SET @album_id := (SELECT album_id FROM Albums WHERE title = 'The Division Bell' LIMIT 1);
 INSERT INTO Songs (album_id, title, duration, language, file_url)
@@ -200,7 +200,7 @@ SELECT 'Oasis', NULL, 'UK', 1991
 WHERE NOT EXISTS (SELECT 1 FROM Artists WHERE name = 'Oasis');
 SET @artist_id := (SELECT artist_id FROM Artists WHERE name = 'Oasis' LIMIT 1);
 INSERT INTO Albums (title, release_date, genre, cover_url)
-SELECT 'Whatever - Single', '1994-12-18', 'Rock', 'https://upload.wikimedia.org/wikipedia/en/1/1d/Whatevercover.jpg'
+SELECT 'Whatever - Single', '1994-12-18', 'Rock', 'https://upload.wikimedia.org/wikipedia/en/4/4d/Whateversingle.png'
 WHERE NOT EXISTS (SELECT 1 FROM Albums WHERE title = 'Whatever - Single');
 SET @album_id := (SELECT album_id FROM Albums WHERE title = 'Whatever - Single' LIMIT 1);
 INSERT INTO Songs (album_id, title, duration, language, file_url)
@@ -268,8 +268,8 @@ WHERE NOT EXISTS (SELECT 1 FROM Artists WHERE name = 'Tame Impala');
 SET @artist_id := (SELECT artist_id FROM Artists WHERE name = 'Tame Impala' LIMIT 1);
 
 INSERT INTO Albums (title, release_date, genre, cover_url)
-SELECT 'B-Sides & Remixes', NULL, 'Psychedelic Rock', NULL
-WHERE NOT EXISTS (SELECT 1 FROM Albums WHERE title = 'B-Sides & Remixes');
+SELECT 'Deadbeat', '2025-10-17', 'Psychedelic Rock', 'https://upload.wikimedia.org/wikipedia/en/f/f1/DeadbeatTameImpala.jpeg'
+WHERE NOT EXISTS (SELECT 1 FROM Albums WHERE title = 'Deadbeat');
 
 SET @album_id := (SELECT album_id FROM Albums WHERE title = 'B-Sides & Remixes' LIMIT 1);
 
@@ -286,7 +286,7 @@ INSERT IGNORE INTO Album_Artists VALUES (@album_id, @artist_id);
 -- 14) Tame Impala - New Person, Same Old Mistakes
 -- ==========================================
 INSERT INTO Albums (title, release_date, genre, cover_url)
-SELECT 'Currents', '2015-07-17', 'Psychedelic Rock', NULL
+SELECT 'Currents', '2015-07-17', 'Psychedelic Rock', 'https://upload.wikimedia.org/wikipedia/en/9/9b/Tame_Impala_-_Currents.png'
 WHERE NOT EXISTS (SELECT 1 FROM Albums WHERE title = 'Currents');
 
 SET @album_id := (SELECT album_id FROM Albums WHERE title = 'Currents' LIMIT 1);
@@ -312,7 +312,7 @@ SET @artist_id := (SELECT artist_id FROM Artists WHERE name = 'Jain' LIMIT 1);
 
 -- 2) Ensure album exists (create if missing), then capture id
 INSERT INTO Albums (title, release_date, genre, cover_url)
-SELECT 'Zanaka', '2015-11-06', 'Pop', 'https://upload.wikimedia.org/wikipedia/en/f/f8/Jain_-_Zanaka.png'
+SELECT 'Zanaka', '2015-11-06', 'Pop', 'https://www.totalntertainment.com/wp-content/uploads//JAIN.jpg'
 WHERE NOT EXISTS (SELECT 1 FROM Albums WHERE title = 'Zanaka');
 
 SET @album_id := (SELECT album_id FROM Albums WHERE title = 'Zanaka' LIMIT 1);
