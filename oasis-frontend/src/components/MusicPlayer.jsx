@@ -49,7 +49,8 @@ export default function MusicPlayer({
   const recordStream = async (songId) => {
     if (!songId) return false;
     
-    const token = localStorage.getItem('token');
+    // support both the existing frontend key and the backend cookie key
+    const token = localStorage.getItem('oasis_token') || localStorage.getItem('token');
     if (!token) {
       alert('Please log in to play music');
       return false;
@@ -88,8 +89,11 @@ export default function MusicPlayer({
       const data = await response.json();
       // If we got streaming stats back, update them in the UI
       if (data.streaming_stats) {
-        if (data.streaming_stats.songs_remaining <= 3) {
-          alert(`You have ${data.streaming_stats.songs_remaining} songs remaining in your daily limit.`);
+        const rem = data.streaming_stats.songs_remaining;
+        // Only show the low-count alert for users where songs_remaining is a number
+        // (free users). For premium users this value may be null -> don't show.
+        if (typeof rem === 'number' && rem <= 3) {
+          alert(`You have ${rem} songs remaining in your daily limit.`);
         }
       }
       
@@ -152,7 +156,7 @@ export default function MusicPlayer({
       setPlaying(false);
     } else {
       // Check for login first
-      if (!localStorage.getItem('token')) {
+      if (!(localStorage.getItem('oasis_token') || localStorage.getItem('token'))) {
         alert('Please log in to play music');
         return;
       }
@@ -188,6 +192,13 @@ export default function MusicPlayer({
   }
 
   const src = song.file_url && song.file_url.startsWith('http') ? song.file_url : `${API_BASE}${song.file_url}`;
+  // Append token to audio src so browser <audio> requests include the token (browsers
+  // don't allow setting Authorization headers on media elements). Use oasis_token
+  // (set by login) or fallback to token.
+  const _token = localStorage.getItem('oasis_token') || localStorage.getItem('token');
+  const srcWithToken = _token
+    ? (src.includes('?') ? `${src}&token=${_token}` : `${src}?token=${_token}`)
+    : src;
 
   const cover = song.album_cover_url ? (song.album_cover_url.startsWith('http') ? song.album_cover_url : `${API_BASE}${song.album_cover_url}`) : null;
 
@@ -204,7 +215,7 @@ export default function MusicPlayer({
       </div>
 
       <audio ref={audioRef} preload="metadata">
-        <source src={src} />
+        <source src={srcWithToken} />
         Your browser does not support the audio element.
       </audio>
 

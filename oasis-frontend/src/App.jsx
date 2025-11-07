@@ -7,6 +7,7 @@ import Login from './pages/Login';
 import Playlists from './pages/Playlists';
 import PlayerPage from './pages/PlayerPage';
 import Profile from './pages/Profile';
+import Admin from './pages/Admin';
 
 function App() {
   const [songs, setSongs] = useState([]);
@@ -15,6 +16,8 @@ function App() {
   const [autoPlayNext, setAutoPlayNext] = useState(false);
   const [loading, setLoading] = useState(true);
   const [username, setUsername] = useState(localStorage.getItem('oasis_username') || '');
+  // derive admin flag from local storage or a special username fallback
+  const isAdmin = (localStorage.getItem('oasis_is_admin') === '1') || username === 'admin';
 
   useEffect(() => {
     let cancelled = false;
@@ -51,6 +54,7 @@ function App() {
     localStorage.removeItem('oasis_token');
     localStorage.removeItem('oasis_user_id');
     localStorage.removeItem('oasis_username');
+    localStorage.removeItem('oasis_is_admin');
     setUsername('');
     try{ window.dispatchEvent(new CustomEvent('oasis_logout')); } catch(e){}
     // navigate home
@@ -69,6 +73,7 @@ function App() {
               <NavLink to="/" className={({isActive}) => isActive ? 'active' : ''}>Library</NavLink>
               <NavLink to="/player" className={({isActive}) => isActive ? 'active' : ''}>Player</NavLink>
               <NavLink to="/playlists" className={({isActive}) => isActive ? 'active' : ''}>Playlists</NavLink>
+              {isAdmin && <NavLink to="/admin" className={({isActive}) => isActive ? 'active' : ''}>Admin</NavLink>}
               {/* show username instead of Login link when signed in */}
               {username ? (
                 <>
@@ -90,6 +95,7 @@ function App() {
 
           <Route path="/player" element={<PlayerPage songs={songs} current={current} setCurrent={setCurrent} autoPlay={autoPlayNext} />} />
           <Route path="/playlists" element={<Playlists />} />
+          <Route path="/admin" element={<Admin />} />
           <Route path="/login" element={<Login />} />
           <Route path="/profile" element={<Profile />} />
         </Routes>

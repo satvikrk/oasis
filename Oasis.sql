@@ -306,6 +306,7 @@ CREATE TABLE `Users` (
   `country` varchar(50) DEFAULT NULL,
   `date_joined` datetime DEFAULT CURRENT_TIMESTAMP,
   `subscription_type` enum('free','premium') DEFAULT 'free',
+  `is_admin` boolean DEFAULT FALSE,
   PRIMARY KEY (`user_id`),
   UNIQUE KEY `email` (`email`)
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -317,7 +318,10 @@ CREATE TABLE `Users` (
 
 LOCK TABLES `Users` WRITE;
 /*!40000 ALTER TABLE `Users` DISABLE KEYS */;
-INSERT INTO `Users` VALUES (1,'PremiumUser','premium@test.com','hash123',NULL,'2025-10-31 23:32:01','premium'),(2,'FreeUser','free@test.com','hash123',NULL,'2025-10-31 23:32:01','free');
+INSERT INTO `Users` (`user_id`, `username`, `email`, `password_hash`, `country`, `date_joined`, `subscription_type`, `is_admin`) VALUES
+  (1, 'PremiumUser', 'premium@test.com', 'hash123', NULL, '2025-10-31 23:32:01', 'premium', 0),
+  (2, 'FreeUser', 'free@test.com', 'hash123', NULL, '2025-10-31 23:32:01', 'free', 0),
+  (3, 'AdminUser', 'admin@test.com', 'hash_admin', NULL, '2025-11-07 00:00:00', 'premium', 1);
 /*!40000 ALTER TABLE `Users` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -330,44 +334,31 @@ ALTER TABLE Users
 ADD COLUMN is_allowed_to_stream BOOLEAN DEFAULT TRUE,
 ADD COLUMN songs_streamed INT DEFAULT 0;
 
--- Drop existing trigger if it exists
-DROP TRIGGER IF EXISTS trg_limit_free_user_streams;
+-- Drop any existing trigger and create a single trigger that updates counts for all users
+DROP TRIGGER IF EXISTS trg_update_songs_streamed;
 
 DELIMITER $$
 
--- Create the trigger
-CREATE TRIGGER trg_limit_free_user_streams
+CREATE TRIGGER trg_update_songs_streamed
 AFTER INSERT ON Listening_History
 FOR EACH ROW
 BEGIN
-    DECLARE current_count INT;
-    DECLARE current_type ENUM('free','premium');
-    DECLARE current_flag BOOLEAN;
+  -- Increment total streams for every user
+  UPDATE Users
+  SET songs_streamed = COALESCE(songs_streamed, 0) + 1
+  WHERE user_id = NEW.user_id;
 
-    -- Get user details
-    SELECT subscription_type, songs_streamed, is_allowed_to_stream
-    INTO current_type, current_count, current_flag
+  -- Enforce free-user daily cap (10); premium users remain allowed
+  UPDATE Users u
+  JOIN (
+    SELECT subscription_type, songs_streamed
     FROM Users
-    WHERE user_id = NEW.user_id;
-
-    -- Only affect free users
-    IF current_type = 'free' THEN
-        -- Increment the counter
-        UPDATE Users
-        SET songs_streamed = songs_streamed + 1
-        WHERE user_id = NEW.user_id;
-
-        -- Check if limit exceeded
-        SELECT songs_streamed INTO current_count
-        FROM Users
-        WHERE user_id = NEW.user_id;
-
-        IF current_count >= 10 THEN
-            UPDATE Users
-            SET is_allowed_to_stream = FALSE
-            WHERE user_id = NEW.user_id;
-        END IF;
-    END IF;
+    WHERE user_id = NEW.user_id
+  ) t ON u.user_id = NEW.user_id
+  SET u.is_allowed_to_stream = CASE
+    WHEN t.subscription_type = 'free' AND t.songs_streamed >= 10 THEN FALSE
+    ELSE TRUE
+  END;
 END$$
 
 DELIMITER ;
@@ -389,100 +380,7 @@ DO
 
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
---
--- Create trigger for limiting free user streams
---
-DELIMITER $$
-
-SET @trigger_exists = (
-  SELECT COUNT(1) 
-  FROM INFORMATION_SCHEMA.TRIGGERS 
-  WHERE TRIGGER_SCHEMA = 'music_streaming' 
-  AND TRIGGER_NAME = 'trg_limit_free_user_streams'
-)$$
-
-SET @sql = IF(
-  @trigger_exists = 0,
-  'CREATE TRIGGER trg_limit_free_user_streams',
-  'SELECT "Trigger already exists"'
-)$$
-
-PREPARE stmt FROM @sql$$
-
-CREATE TRIGGER trg_limit_free_user_streams
-AFTER INSERT ON Listening_History
-FOR EACH ROW
-BEGIN
-    DECLARE current_count INT;
-    DECLARE current_type ENUM('free','premium');
-    DECLARE current_flag BOOLEAN;
-
-    -- Get user details
-    SELECT subscription_type, songs_streamed, is_allowed_to_stream
-    INTO current_type, current_count, current_flag
-    FROM Users
-    WHERE user_id = NEW.user_id;
-
-    -- Only affect free users
-    IF current_type = 'free' THEN
-        -- Increment the counter
-        UPDATE Users
-        SET songs_streamed = songs_streamed + 1
-        WHERE user_id = NEW.user_id;
-
-        -- Check if limit exceeded
-        SELECT songs_streamed INTO current_count
-        FROM Users
-        WHERE user_id = NEW.user_id;
-
-        IF current_count >= 10 THEN
-            UPDATE Users
-            SET is_allowed_to_stream = FALSE
-            WHERE user_id = NEW.user_id;
-        END IF;
-    END IF;
-END$$
-
-DELIMITER ;
-
---
--- Enable event scheduler and create daily reset event
---
--- Enable event scheduler if not already enabled
-SET @event_scheduler_status = (
-  SELECT @@event_scheduler
-);
-
-SET @enable_scheduler = IF(
-  @event_scheduler_status != 'ON',
-  'SET GLOBAL event_scheduler = ON',
-  'SELECT "Event scheduler already enabled"'
-);
-
-PREPARE stmt FROM @enable_scheduler;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
-
--- Create event if it doesn't exist
-SET @event_exists = (
-  SELECT COUNT(1) 
-  FROM information_schema.events 
-  WHERE EVENT_SCHEMA = 'music_streaming' 
-  AND EVENT_NAME = 'reset_free_user_streams'
-);
-
-SET @create_event = IF(
-  @event_exists = 0,
-  'CREATE EVENT reset_free_user_streams',
-  'ALTER EVENT reset_free_user_streams'
-);
-ON SCHEDULE EVERY 1 DAY
-STARTS CURRENT_TIMESTAMP
-DO
-    UPDATE Users
-    SET songs_streamed = 0, is_allowed_to_stream = TRUE
-    WHERE subscription_type = 'free';
-
+-- duplicate conditional trigger block removed
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -493,57 +391,119 @@ DO
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-10-31 23:54:37
+-- Add user statistics procedure
+DELIMITER //
 
-ALTER TABLE Users
-ADD COLUMN is_allowed_to_stream BOOLEAN DEFAULT TRUE,
-ADD COLUMN songs_streamed INT DEFAULT 0;
-
-DELIMITER $$
-
-CREATE TRIGGER trg_limit_free_user_streams
-AFTER INSERT ON Listening_History
-FOR EACH ROW
+CREATE PROCEDURE get_user_listening_stats(
+    IN user_id INT
+)
 BEGIN
-    DECLARE current_count INT;
-    DECLARE current_type ENUM('free','premium');
-    DECLARE current_flag BOOLEAN;
-
-    -- Get user details
-    SELECT subscription_type, songs_streamed, is_allowed_to_stream
-    INTO current_type, current_count, current_flag
-    FROM Users
-    WHERE user_id = NEW.user_id;
-
-    -- Only affect free users
-    IF current_type = 'free' THEN
-
-        -- Increment the counter
-        UPDATE Users
-        SET songs_streamed = songs_streamed + 1
-        WHERE user_id = NEW.user_id;
-
-        -- Check if limit exceeded
-        SELECT songs_streamed INTO current_count
-        FROM Users
-        WHERE user_id = NEW.user_id;
-
-        IF current_count >= 10 THEN
-            UPDATE Users
-            SET is_allowed_to_stream = FALSE
-            WHERE user_id = NEW.user_id;
-        END IF;
-
-    END IF;
-END$$
+    -- Get total listening time and top genres for a user
+    SELECT 
+        u.username,
+        COUNT(DISTINCT h.song_id) as unique_songs_played,
+        COUNT(h.song_id) as total_plays,
+        SEC_TO_TIME(SUM(TIME_TO_SEC(s.duration))) as total_listening_time,
+        GROUP_CONCAT(DISTINCT s.language ORDER BY s.language SEPARATOR ', ') as languages_listened,
+        (SELECT COUNT(*) FROM Playlists WHERE user_id = u.user_id) as playlist_count,
+        (SELECT COUNT(*) FROM Likes WHERE user_id = u.user_id) as likes_count
+    FROM Users u
+    LEFT JOIN Listening_History h ON u.user_id = h.user_id
+    LEFT JOIN Songs s ON h.song_id = s.song_id
+    WHERE u.user_id = user_id
+    GROUP BY u.user_id;
+END//
 
 DELIMITER ;
 
-SET GLOBAL event_scheduler = ON;
+-- Dump completed on 2025-10-31 23:54:37
 
-CREATE EVENT reset_free_user_streams
-ON SCHEDULE EVERY 1 DAY
-DO
-  UPDATE Users
-  SET songs_streamed = 0, is_allowed_to_stream = TRUE
-  WHERE subscription_type = 'free';
+-- ======================================================================
+-- Analytic views and helper function
+-- These views make common analytics queries simple to run from the backend
+-- ======================================================================
+
+-- 1) Top artists by total plays (aggregates Listening_History via song -> song_artists -> artists)
+CREATE OR REPLACE VIEW view_top_artists_by_plays AS
+SELECT
+  ar.artist_id,
+  ar.name AS artist_name,
+  COUNT(l.history_id) AS play_count
+FROM Listening_History l
+JOIN Songs s ON l.song_id = s.song_id
+JOIN Song_Artists sa ON s.song_id = sa.song_id
+JOIN Artists ar ON sa.artist_id = ar.artist_id
+GROUP BY ar.artist_id, ar.name
+ORDER BY play_count DESC;
+
+-- 2) Top albums by streams
+CREATE OR REPLACE VIEW view_top_albums_by_streams AS
+SELECT
+  al.album_id,
+  al.title AS album_title,
+  al.release_date,
+  COUNT(l.history_id) AS play_count
+FROM Listening_History l
+JOIN Songs s ON l.song_id = s.song_id
+JOIN Albums al ON s.album_id = al.album_id
+GROUP BY al.album_id, al.title, al.release_date
+ORDER BY play_count DESC;
+
+-- 3) Active users in the last 7 days (total plays and unique songs listened)
+CREATE OR REPLACE VIEW view_active_users_last_7_days AS
+SELECT
+  u.user_id,
+  u.username,
+  COUNT(l.history_id) AS total_plays_last_7_days,
+  COUNT(DISTINCT l.song_id) AS unique_songs_last_7_days
+FROM Users u
+LEFT JOIN Listening_History l ON u.user_id = l.user_id AND l.listened_at >= NOW() - INTERVAL 7 DAY
+GROUP BY u.user_id, u.username
+HAVING total_plays_last_7_days > 0
+ORDER BY total_plays_last_7_days DESC;
+
+-- 4) Recently added songs with artist and album metadata (useful for admin 'recent uploads')
+CREATE OR REPLACE VIEW view_recent_songs_with_metadata AS
+SELECT
+  s.song_id,
+  s.title,
+  s.file_url,
+  TIME_FORMAT(s.duration, '%H:%i:%s') AS duration,
+  s.language,
+  al.album_id,
+  al.title AS album_title,
+  al.release_date AS album_release_date,
+  al.cover_url AS album_cover_url,
+  -- pick first artist (main) and aggregate others into a list
+  SUBSTRING_INDEX(GROUP_CONCAT(DISTINCT ar.name ORDER BY CASE WHEN sa.role = 'main' THEN 0 ELSE 1 END SEPARATOR ', '), ', ', 1) AS main_artist,
+  GROUP_CONCAT(DISTINCT ar.name ORDER BY CASE WHEN sa.role = 'main' THEN 0 ELSE 1 END SEPARATOR ', ') AS all_artists
+FROM Songs s
+LEFT JOIN Albums al ON s.album_id = al.album_id
+LEFT JOIN Song_Artists sa ON s.song_id = sa.song_id
+LEFT JOIN Artists ar ON sa.artist_id = ar.artist_id
+GROUP BY s.song_id, s.title, s.file_url, s.duration, s.language, al.album_id, al.title, al.release_date, al.cover_url
+ORDER BY s.song_id DESC;
+
+-- 5) Genre and language distribution across songs (by album genre and song language)
+CREATE OR REPLACE VIEW view_genre_language_distribution AS
+SELECT
+  COALESCE(al.genre, 'unknown') AS album_genre,
+  COALESCE(s.language, 'unknown') AS song_language,
+  COUNT(s.song_id) AS song_count
+FROM Songs s
+LEFT JOIN Albums al ON s.album_id = al.album_id
+GROUP BY COALESCE(al.genre, 'unknown'), COALESCE(s.language, 'unknown')
+ORDER BY song_count DESC;
+
+-- Stored function: return total songs in playlist
+DELIMITER $$
+CREATE FUNCTION get_playlist_song_count(p_playlist_id INT)
+RETURNS INT DETERMINISTIC
+BEGIN
+  DECLARE cnt INT DEFAULT 0;
+  SELECT COUNT(*) INTO cnt FROM Playlist_Songs WHERE playlist_id = p_playlist_id;
+  RETURN COALESCE(cnt, 0);
+END$$
+DELIMITER ;
+
+

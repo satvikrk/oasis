@@ -22,8 +22,10 @@ export default function Login(){
       localStorage.setItem('oasis_token', data.token);
       localStorage.setItem('oasis_user_id', data.user_id);
       localStorage.setItem('oasis_username', data.username);
+    // store admin flag so the frontend can show admin UI immediately
+    try{ localStorage.setItem('oasis_is_admin', data.is_admin ? '1' : '0'); }catch(e){}
   // notify app that a login occurred so navbar can update immediately
-  try{ window.dispatchEvent(new CustomEvent('oasis_login', { detail: { user_id: data.user_id, username: data.username } })); }catch(e){}
+  try{ window.dispatchEvent(new CustomEvent('oasis_login', { detail: { user_id: data.user_id, username: data.username, is_admin: !!data.is_admin } })); }catch(e){}
   navigate('/playlists');
     }catch(err){ setError(String(err)); }
   }
